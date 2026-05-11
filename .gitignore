@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+*.xlsx
+Weld-NDE-Log-*.xlsx
+node_modules/
+.env
+.idea/
+*.swp
+*.swo

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weld & NDE Log - Interactive Form</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+
+        .panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .file-upload-section {
+            margin-bottom: 30px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .file-input-label:hover {
+            background: #764ba2;
+        }
+
+        .file-name {
+            margin-top: 10px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.95em;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .grid-view {
+            margin-top: 30px;
+        }
+
+        .grid-container {
+            overflow-x: auto;
+            background: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+
+        th {
+            background: #ffd700;
+            color: #333;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e6b800;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:hover {
+            background: #f0f0f0;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+        }
+
+        .btn-secondary {
+            background: #cbd5e0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #a0aec0;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-info {
+            background: #bee3f8;
+            color: #2c5282;
+            border: 1px solid #90cdf4;
+        }
+
+        .alert-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .alert-error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+
+        .form-complete {
+            background: #c6f6d5;
+            padding: 15px;
+            border-radius: 5px;
+            color: #22543d;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .form-complete.show {
+            display: block;
+        }
+
+        .row-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .row-actions button {
+            flex: 1;
+            padding: 6px 10px;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📋 Weld & NDE Log</h1>
+            <p>Interactive Data Entry Form</p>
+        </header>
+
+        <div id="alert" class="alert"></div>
+
+        <div class="main-content" id="mainContent">
+            <!-- Left Panel: Form Input -->
+            <div class="panel">
+                <h2>📝 Answer Questions</h2>
+                <div style="background: #ffeaa7; padding: 12px; border-radius: 5px; margin-bottom: 20px; font-weight: 600; color: #333;">
+                    Answering question set <span id="currentRow">1</span> of <span id="totalRows">∞</span>
+                </div>
+
+                <form id="dataForm">
+                    <div id="formFields"></div>
+                    <div class="button-group">
+                        <button type="submit" class="btn-primary" id="submitBtn">✅ Save & Next</button>
+                        <button type="reset" class="btn-secondary">🔄 Clear</button>
+                        <button type="button" class="btn-secondary" id="cancelBtn" style="display: none;">❌ Cancel Edit</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Right Panel: Grid View -->
+            <div class="panel">
+                <h2>📊 Collected Data</h2>
+                <div style="background: #e6fffa; padding: 12px; border-radius: 5px; margin-bottom: 20px; color: #0b5345;">
+                    Total entries: <strong id="entryCount">0</strong>
+                </div>
+                <div id="gridContainer" class="grid-container">
+                    <div class="empty-state">
+                        <p>Start answering questions to see data here</p>
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button class="btn-success" id="exportBtn" style="display: none;">⬇️ Export to Excel</button>
+                    <button class="btn-danger" id="clearAllBtn" style="display: none;">🗑️ Clear All</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@latest/dist/xlsx.full.min.js"></script>
+    <script>
+        // Hardcoded questions from the Excel file top row
+        const headers = [
+            "Subsystem #",
+            "CWA #",
+            "Isometric #",
+            "Weld Number",
+            "Weld Type",
+            "Piping OD (in)",
+            "Pipe Thickness (mm)",
+            "Material Grade",
+            "Line Class Designation",
+            "Code of Construction",
+            "WPS #",
+            "Welder ID",
+            "Weld Date",
+            "VT Date",
+            "VT By",
+            "NDE",
+            "RT Report Number",
+            "RT Date",
+            "NDE Pass/Fail",
+            "MT / LPI Report Number",
+            "Hydrotest Number",
+            "Weld Inspection Uploaded to T/O",
+            "NDE Uploaded to T/O",
+            "Coating Report No.",
+            "Comments"
+        ];
+        
+        let data = [];
+        let editingIndex = null;
+
+        const formFields = document.getElementById('formFields');
+        const dataForm = document.getElementById('dataForm');
+        const gridContainer = document.getElementById('gridContainer');
+        const exportBtn = document.getElementById('exportBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const alert = document.getElementById('alert');
+        const currentRow = document.getElementById('currentRow');
+        const entryCount = document.getElementById('entryCount');
+        const mainContent = document.getElementById('mainContent');
+        const submitBtn = document.getElementById('submitBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+
+        // Initialize app on load
+        function initializeApp() {
+            renderForm();
+            renderGrid();
+            exportBtn.style.display = 'inline-block';
+            clearAllBtn.style.display = 'inline-block';
+            dataForm.reset();
+            dataForm.elements[0]?.focus();
+            showAlert('✅ Ready to start! Answer the questions below.', 'success');
+        }
+
+
+
+        // Render form fields
+        function renderForm() {
+            formFields.innerHTML = '';
+            headers.forEach((header, idx) => {
+                const div = document.createElement('div');
+                div.className = 'form-group';
+                div.innerHTML = `
+                    <label for="field-${idx}">❓ ${header}</label>
+                    <input type="text" id="field-${idx}" name="field-${idx}" placeholder="Enter your answer" autofocus=${idx === 0 ? 'true' : 'false'}>
+                `;
+                formFields.appendChild(div);
+            });
+        }
+
+        // Render grid
+        function renderGrid() {
+            entryCount.textContent = data.length;
+
+            if (data.length === 0) {
+                gridContainer.innerHTML = '<div class="empty-state"><p>📝 Answer the questions to add entries</p></div>';
+                return;
+            }
+
+            let html = '<table><thead><tr>';
+            headers.forEach(header => {
+                html += `<th>${header}</th>`;
+            });
+            html += '<th style="min-width: 100px;">Actions</th></tr></thead><tbody>';
+
+            data.forEach((row, rowIdx) => {
+                html += '<tr>';
+                headers.forEach(header => {
+                    html += `<td>${row[header] || ''}</td>`;
+                });
+                html += `<td><div class="row-actions"><button class="btn-secondary" type="button" onclick="editRow(${rowIdx})">Edit</button><button class="btn-danger" type="button" onclick="deleteRow(${rowIdx})">Delete</button></div></td>`;
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            gridContainer.innerHTML = html;
+        }
+
+        // Form submit
+        dataForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const row = {};
+            let hasAnyData = false;
+            headers.forEach((header, idx) => {
+                const input = document.getElementById(`field-${idx}`);
+                const value = input.value.trim();
+                // Fill empty fields with "N/A"
+                row[header] = value || 'N/A';
+                if (value) hasAnyData = true;
+            });
+
+            if (!hasAnyData) {
+                showAlert('Please fill in at least one field', 'error');
+                return;
+            }
+
+            // If editing, update the existing row
+            if (editingIndex !== null) {
+                data[editingIndex] = row;
+                editingIndex = null;
+                submitBtn.textContent = '✅ Save & Next';
+                cancelBtn.style.display = 'none';
+                showAlert('✅ Entry updated!', 'success');
+            } else {
+                // Otherwise add a new row
+                data.push(row);
+                showAlert(`✅ Entry ${data.length} saved! Ready for entry ${data.length + 1}.`, 'success');
+            }
+
+            dataForm.reset();
+            renderGrid();
+            currentRow.textContent = data.length + 1;
+            
+            // Focus first field
+            document.getElementById('field-0')?.focus();
+        });
+
+        // Cancel edit
+        cancelBtn.addEventListener('click', function() {
+            editingIndex = null;
+            dataForm.reset();
+            renderGrid();
+            submitBtn.textContent = '✅ Save & Next';
+            cancelBtn.style.display = 'none';
+            currentRow.textContent = data.length + 1;
+            document.getElementById('field-0')?.focus();
+            showAlert('Edit cancelled', 'info');
+        });
+
+        // Delete row
+        window.deleteRow = function(idx) {
+            if (confirm('Delete this entry?')) {
+                data.splice(idx, 1);
+                renderGrid();
+                currentRow.textContent = data.length + 1;
+                showAlert('Entry deleted', 'success');
+            }
+        };
+
+        // Edit row
+        window.editRow = function(idx) {
+            const row = data[idx];
+            editingIndex = idx;
+            headers.forEach((header, hIdx) => {
+                const input = document.getElementById(`field-${hIdx}`);
+                // Show empty if the value is "N/A"
+                input.value = (row[header] === 'N/A') ? '' : (row[header] || '');
+            });
+            
+            submitBtn.textContent = '💾 Update Entry';
+            cancelBtn.style.display = 'inline-block';
+            currentRow.textContent = idx + 1;
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.getElementById('field-0')?.focus();
+            showAlert('Editing entry #' + (idx + 1) + '. Click "Update Entry" to save changes.', 'info');
+        };
+
+        // Export to Excel
+        exportBtn.addEventListener('click', function() {
+            if (data.length === 0) {
+                showAlert('No data to export', 'error');
+                return;
+            }
+
+            try {
+                console.log('=== EXPORT STARTED ===');
+                console.log('Data entries:', data.length);
+                console.log('XLSX available:', typeof XLSX !== 'undefined');
+                
+                // Wait for XLSX to load if not ready
+                if (typeof XLSX === 'undefined') {
+                    console.log('XLSX loading, waiting...');
+                    showAlert('Excel library loading... Please wait.', 'info');
+                    
+                    // Retry after 2 seconds
+                    setTimeout(() => {
+                        console.log('XLSX available now:', typeof XLSX !== 'undefined');
+                        if (typeof XLSX !== 'undefined') {
+                            performExport();
+                        } else {
+                            showAlert('Excel library failed to load. Try refreshing the page.', 'error');
+                        }
+                    }, 2000);
+                    return;
+                }
+
+                performExport();
+                
+                function performExport() {
+                    // Build data array
+                    const worksheet_data = [];
+                    worksheet_data.push(headers);
+                    
+                    data.forEach((row, idx) => {
+                        const rowArray = headers.map(header => row[header] || 'N/A');
+                        worksheet_data.push(rowArray);
+                    });
+                    
+                    console.log('Total rows to export:', worksheet_data.length);
+                    
+                    // Create workbook and worksheet
+                    const workbook = XLSX.utils.book_new();
+                    console.log('Workbook created');
+                    
+                    const worksheet = XLSX.utils.aoa_to_sheet(worksheet_data);
+                    console.log('Worksheet created from array');
+                    
+                    // Set column widths
+                    worksheet['!cols'] = headers.map(() => ({ wch: 20 }));
+                    
+                    // Style header row - yellow background
+                    for (let col = 0; col < headers.length; col++) {
+                        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+                        if (!worksheet[cellAddress]) {
+                            worksheet[cellAddress] = { t: 's', v: headers[col] };
+                        }
+                        worksheet[cellAddress].s = {
+                            fill: { fgColor: { rgb: 'FFFF00' }, patternType: 'solid' },
+                            font: { bold: true, color: { rgb: '000000' } },
+                            alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+                        };
+                    }
+                    console.log('Header styling applied');
+                    
+                    // Add sheet to workbook
+                    XLSX.utils.book_append_sheet(workbook, worksheet, 'Weld Log');
+                    console.log('Sheet added to workbook');
+                    
+                    // Generate filename with timestamp
+                    const timestamp = new Date().toISOString().slice(0, 10);
+                    const filename = `Weld-NDE-Log-${timestamp}.xlsx`;
+                    console.log('Writing file:', filename);
+                    
+                    // Write the file
+                    XLSX.writeFile(workbook, filename);
+                    console.log('=== EXPORT COMPLETED ===');
+                    
+                    showAlert(`✅ Excel file "${filename}" downloaded!`, 'success');
+                }
+                
+            } catch (error) {
+                console.error('=== EXPORT ERROR ===');
+                console.error('Error message:', error.message);
+                console.error('Error stack:', error.stack);
+                showAlert('Export failed: ' + error.message, 'error');
+            }
+        });
+
+        // Clear all data
+        clearAllBtn.addEventListener('click', function() {
+            if (confirm('Clear all entries?')) {
+                data = [];
+                editingIndex = null;
+                dataForm.reset();
+                renderGrid();
+                currentRow.textContent = '1';
+                submitBtn.textContent = '✅ Save & Next';
+                cancelBtn.style.display = 'none';
+                document.getElementById('field-0')?.focus();
+                showAlert('All data cleared', 'success');
+            }
+        });
+
+        // Show alert
+        function showAlert(message, type) {
+            alert.textContent = message;
+            alert.className = `alert show alert-${type}`;
+            setTimeout(() => {
+                alert.classList.remove('show');
+            }, 4000);
+        }
+
+        // Start the app
+        initializeApp();
+    </script>
+</body>
+</html>
