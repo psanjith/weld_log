@@ -518,8 +518,7 @@
                     </div>
                 </div>
                 <div class="button-group">
-                    <button class="btn-success" id="exportBtn" style="display: none;">Download Excel</button>
-                    <button class="btn-success" id="exportWithPdfsBtn" style="display: none;">Download with PDFs</button>
+                    <button class="btn-success" id="exportBtn" style="display: none;">Download Log</button>
                 </div>
                 
                 <!-- Log Management Section -->
@@ -657,7 +656,6 @@
         const dataForm = document.getElementById('dataForm');
         const gridContainer = document.getElementById('gridContainer');
         const exportBtn = document.getElementById('exportBtn');
-        const exportWithPdfsBtn = document.getElementById('exportWithPdfsBtn');
         const alert = document.getElementById('alert');
         
         // Log management elements
@@ -741,7 +739,6 @@
                 renderLogSelector();
                 logManagement.style.display = 'block';
                 exportBtn.style.display = 'inline-block';
-                exportWithPdfsBtn.style.display = 'inline-block';
                 renderGrid();
                 dataForm.reset();
                 dataForm.elements[0]?.focus();
@@ -1019,37 +1016,57 @@
         };
 
         // Export to Excel
-        exportBtn.addEventListener('click', function() {
+        exportBtn.addEventListener('click', async function() {
             if (data.length === 0) {
                 showAlert('No data to export', 'error');
                 return;
             }
 
-            try {
-                console.log('=== EXPORT STARTED ===');
-                console.log('Data entries:', data.length);
-                console.log('XLSX available:', typeof XLSX !== 'undefined');
-                
-                // Wait for XLSX to load if not ready
-                if (typeof XLSX === 'undefined') {
-                    console.log('XLSX loading, waiting...');
-                    showAlert('Excel library loading... Please wait.', 'info');
-                    
-                    // Retry after 2 seconds
+            // Check if there are any PDFs to export
+            let hasPDFs = false;
+            for (let rowIdx = 0; rowIdx < data.length; rowIdx++) {
+                const row = data[rowIdx];
+                for (let colIdx = 0; colIdx < headers.length; colIdx++) {
+                    const header = headers[colIdx];
+                    if (row[`${header}_file`]) {
+                        hasPDFs = true;
+                        break;
+                    }
+                }
+                if (hasPDFs) break;
+            }
+
+            // If PDFs exist, create ZIP; otherwise just download Excel
+            if (hasPDFs) {
+                if (typeof JSZip === 'undefined') {
+                    showAlert('ZIP library loading... Please wait.', 'info');
                     setTimeout(() => {
-                        console.log('XLSX available now:', typeof XLSX !== 'undefined');
+                        if (typeof JSZip !== 'undefined') {
+                            performExportWithZip();
+                        } else {
+                            showAlert('ZIP library failed to load. Try refreshing the page.', 'error');
+                        }
+                    }, 2000);
+                    return;
+                }
+                performExportWithZip();
+            } else {
+                if (typeof XLSX === 'undefined') {
+                    showAlert('Excel library loading... Please wait.', 'info');
+                    setTimeout(() => {
                         if (typeof XLSX !== 'undefined') {
-                            performExport();
+                            performExcelExport();
                         } else {
                             showAlert('Excel library failed to load. Try refreshing the page.', 'error');
                         }
                     }, 2000);
                     return;
                 }
+                performExcelExport();
+            }
 
-                performExport();
-                
-                function performExport() {
+            function performExcelExport() {
+                try {
                     // Build data array
                     const worksheet_data = [];
                     worksheet_data.push(headers);
@@ -1059,16 +1076,9 @@
                         worksheet_data.push(rowArray);
                     });
                     
-                    console.log('Total rows to export:', worksheet_data.length);
-                    
                     // Create workbook and worksheet
                     const workbook = XLSX.utils.book_new();
-                    console.log('Workbook created');
-                    
                     const worksheet = XLSX.utils.aoa_to_sheet(worksheet_data);
-                    console.log('Worksheet created from array');
-                    
-                    // Set column widths
                     worksheet['!cols'] = headers.map(() => ({ wch: 20 }));
                     
                     // Style header row - yellow background
@@ -1083,62 +1093,33 @@
                             alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
                         };
                     }
-                    console.log('Header styling applied');
                     
                     // Add sheet to workbook
                     XLSX.utils.book_append_sheet(workbook, worksheet, 'Weld Log');
-                    console.log('Sheet added to workbook');
                     
                     // Generate filename with timestamp
                     const timestamp = new Date().toISOString().slice(0, 10);
                     const filename = `Weld-NDE-Log-${timestamp}.xlsx`;
-                    console.log('Writing file:', filename);
                     
                     // Write the file
                     XLSX.writeFile(workbook, filename);
-                    console.log('=== EXPORT COMPLETED ===');
                     
-                    showAlert(`Excel file "${filename}" downloaded successfully.`, 'success');
+                    showAlert(`Excel file downloaded.`, 'success');
+                } catch (error) {
+                    console.error('Export error:', error);
+                    showAlert('Export failed: ' + error.message, 'error');
                 }
-                
-            } catch (error) {
-                console.error('=== EXPORT ERROR ===');
-                console.error('Error message:', error.message);
-                console.error('Error stack:', error.stack);
-                showAlert('Export failed: ' + error.message, 'error');
-            }
-        });
-
-        // Export with PDFs as ZIP
-        exportWithPdfsBtn.addEventListener('click', async function() {
-            if (data.length === 0) {
-                showAlert('No data to export', 'error');
-                return;
             }
 
-            if (typeof JSZip === 'undefined') {
-                showAlert('ZIP library loading... Please wait.', 'info');
-                setTimeout(() => {
-                    if (typeof JSZip !== 'undefined') {
-                        performZipExport();
-                    } else {
-                        showAlert('ZIP library failed to load. Try refreshing the page.', 'error');
-                    }
-                }, 2000);
-                return;
-            }
-
-            performZipExport();
-
-            async function performZipExport() {
+            async function performExportWithZip() {
                 try {
-                    showAlert('Creating ZIP file with PDFs and links...', 'info');
+                    showAlert('Creating ZIP file with PDFs...', 'info');
                     
                     // Create ZIP
                     const zip = new JSZip();
 
                     // Collect PDF information first
-                    const pdfLinks = {}; // Will store cell addresses with PDF links
+                    const pdfLinks = {};
                     const pdfFolder = zip.folder('PDFs');
                     let pdfCount = 0;
                     
@@ -1156,8 +1137,8 @@
                                     if (fileData) {
                                         rowFolder.file(fileData.name, fileData.data);
                                         
-                                        // Store the link info - use relative path that works in ZIP
-                                        const excelRowIdx = rowIdx + 1; // +1 for header row
+                                        // Store the link info
+                                        const excelRowIdx = rowIdx + 1;
                                         const cellAddress = XLSX.utils.encode_cell({ r: excelRowIdx, c: colIdx });
                                         pdfLinks[cellAddress] = {
                                             fileName: fileData.name,
@@ -1177,11 +1158,7 @@
                     worksheet_data.push(headers);
                     
                     data.forEach((row, idx) => {
-                        const rowArray = headers.map(header => {
-                            const textValue = row[header] || 'N/A';
-                            // Return plain value; will add hyperlink styling after
-                            return textValue;
-                        });
+                        const rowArray = headers.map(header => row[header] || 'N/A');
                         worksheet_data.push(rowArray);
                     });
                     
@@ -1208,22 +1185,15 @@
                         const cell = worksheet[cellAddress];
                         
                         if (cell) {
-                            // Create proper hyperlink structure for XLSX
                             const fileName = linkInfo.fileName;
-                            
-                            // Store hyperlink with relative path that works in ZIP
                             cell.l = { 
                                 Target: linkInfo.path,
                                 Tooltip: fileName
                             };
-                            
-                            // Keep the original text but style as hyperlink
-                            cell.t = 's'; // String type
+                            cell.t = 's';
                             if (!cell.v) {
                                 cell.v = fileName;
                             }
-                            
-                            // Style as blue underlined link
                             cell.s = {
                                 font: { 
                                     color: { rgb: '0563C1' }, 
@@ -1250,9 +1220,9 @@
                     link.click();
                     URL.revokeObjectURL(url);
                     
-                    showAlert(`ZIP file downloaded with ${pdfCount} PDF(s) as clickable links.`, 'success');
+                    showAlert(`ZIP file downloaded with ${pdfCount} PDF(s).`, 'success');
                 } catch (error) {
-                    console.error('ZIP export error:', error);
+                    console.error('Export error:', error);
                     showAlert('Export failed: ' + error.message, 'error');
                 }
             }
