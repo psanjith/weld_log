@@ -556,6 +556,10 @@
                     Entry <span id="currentRow">1</span> of ∞
                 </div>
 
+                <div style="background: #e6f7ff; border-left: 3px solid #4299e1; padding: 12px 15px; margin-bottom: 20px; border-radius: 4px; font-size: 0.9em;">
+                    <strong style="color: #003d66;">💡 Tip:</strong> <span style="color: #003d66;">Use formulas like <code style="background: #fff; padding: 2px 5px; border-radius: 2px;">=10+5</code> or <code style="background: #fff; padding: 2px 5px; border-radius: 2px;">=A*B</code> (A, B refer to column letters)</span>
+                </div>
+
                 <form id="dataForm">
                     <div id="formFields"></div>
                     <div class="button-group">
@@ -709,6 +713,69 @@
                 URL.revokeObjectURL(url);
             } catch (error) {
                 showAlert('Error downloading file: ' + error.message, 'error');
+            }
+        }
+
+        // Evaluate formulas (like Excel: =10+5, =B2*C2, etc.)
+        function evaluateFormula(formulaStr, currentRow) {
+            if (!formulaStr || !formulaStr.startsWith('=')) {
+                return formulaStr; // Not a formula
+            }
+
+            try {
+                let expr = formulaStr.substring(1); // Remove leading '='
+
+                // Handle Excel-like functions
+                expr = expr.replace(/SUM\(([^)]+)\)/gi, (match, range) => {
+                    const parts = range.split(':');
+                    let sum = 0;
+                    // For simple implementation, support basic ranges or cell references
+                    if (parts.length === 2) {
+                        // Try to sum a range of cells (simplified)
+                        const values = range.split(',').map(v => {
+                            const val = isNaN(v.trim()) ? (currentRow[headers.indexOf(v.trim())] || 0) : parseFloat(v.trim());
+                            return parseFloat(val) || 0;
+                        });
+                        sum = values.reduce((a, b) => a + b, 0);
+                    } else {
+                        range.split(',').forEach(cell => {
+                            const val = currentRow[cell.trim()] || 0;
+                            sum += parseFloat(val) || 0;
+                        });
+                    }
+                    return sum;
+                });
+
+                // Handle AVERAGE
+                expr = expr.replace(/AVERAGE\(([^)]+)\)/gi, (match, range) => {
+                    const values = range.split(',').map(cell => {
+                        const val = currentRow[cell.trim()] || 0;
+                        return parseFloat(val) || 0;
+                    });
+                    return values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+                });
+
+                // Replace header references with their values (e.g., B2 becomes currentRow['header_name'])
+                headers.forEach((header, idx) => {
+                    const colLetter = String.fromCharCode(65 + idx); // A, B, C, etc.
+                    const pattern = new RegExp(colLetter + '(?![A-Z])', 'g'); // Match column letter not followed by another letter
+                    expr = expr.replace(pattern, () => {
+                        const val = currentRow[header] || 0;
+                        const numVal = parseFloat(val);
+                        return isNaN(numVal) ? 0 : numVal;
+                    });
+                });
+
+                // Safely evaluate the expression (basic math operations only)
+                // Allow: numbers, operators (+, -, *, /, %), parentheses
+                if (!/^[0-9+\-*/(). ]+$/.test(expr)) {
+                    return `ERROR: Invalid formula`;
+                }
+
+                const result = Function('"use strict"; return (' + expr + ')')();
+                return isNaN(result) ? 'ERROR' : result.toString();
+            } catch (error) {
+                return `ERROR: ${error.message}`;
             }
         }
 
@@ -956,12 +1023,13 @@
                 headers.forEach(header => {
                     const fileId = row[`${header}_file`];
                     const value = row[header] || '';
+                    const hasFormula = !!row[`${header}_formula`];
                     
                     if (fileId) {
                         // Show file with download link
                         html += `<td><button class="btn-primary" style="padding: 6px 12px; font-size: 0.85em;" type="button" onclick="downloadFile('${fileId}')">📄 ${value}</button></td>`;
                     } else {
-                        html += `<td>${value}</td>`;
+                        html += `<td>${hasFormula ? '<span style="color: #4299e1; font-weight: 600; margin-right: 4px;">ƒ</span>' : ''}${value}</td>`;
                     }
                 });
                 html += `<td><div class="row-actions"><button class="btn-secondary" type="button" onclick="editRow(${rowIdx})">Edit</button><button class="btn-danger" type="button" onclick="deleteRow(${rowIdx})">Delete</button></div></td>`;
@@ -999,7 +1067,12 @@
                         return;
                     }
                 } else if (value) {
-                    row[header] = value;
+                    // Evaluate formula if it starts with =
+                    const evaluatedValue = evaluateFormula(value, row);
+                    if (value.startsWith('=')) {
+                        row[`${header}_formula`] = value; // Store original formula
+                    }
+                    row[header] = evaluatedValue;
                     hasAnyData = true;
                 } else {
                     row[header] = 'N/A';
@@ -1062,8 +1135,10 @@
             editingIndex = idx;
             headers.forEach((header, hIdx) => {
                 const input = document.getElementById(`field-${hIdx}`);
-                // Show empty if the value is "N/A"
-                input.value = (row[header] === 'N/A') ? '' : (row[header] || '');
+                // Show original formula if it exists, otherwise show the value
+                const formulaKey = `${header}_formula`;
+                const displayValue = row[formulaKey] || row[header] || '';
+                input.value = (displayValue === 'N/A') ? '' : displayValue;
             });
             
             submitBtn.textContent = 'Update Entry';
