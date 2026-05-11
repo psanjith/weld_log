@@ -13,91 +13,53 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f5f7fa;
             min-height: 100vh;
             padding: 20px;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
         header {
             text-align: center;
-            color: white;
-            margin-bottom: 40px;
+            margin-bottom: 50px;
         }
 
         header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            font-size: 2.2em;
+            color: #1a365d;
+            margin-bottom: 8px;
+            font-weight: 700;
         }
 
         header p {
-            font-size: 1.1em;
-            opacity: 0.9;
+            font-size: 1em;
+            color: #718096;
         }
 
         .main-content {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 25px;
             margin-bottom: 30px;
         }
 
         .panel {
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 35px;
+            border: 1px solid #e2e8f0;
         }
 
         .panel h2 {
-            color: #333;
-            margin-bottom: 20px;
-            font-size: 1.3em;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
-        }
-
-        .file-upload-section {
-            margin-bottom: 30px;
-        }
-
-        .file-input-wrapper {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-            width: 100%;
-        }
-
-        .file-input-wrapper input[type=file] {
-            position: absolute;
-            left: -9999px;
-        }
-
-        .file-input-label {
-            display: block;
-            padding: 15px;
-            background: #667eea;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-            text-align: center;
+            color: #1a365d;
+            margin-bottom: 25px;
+            font-size: 1.35em;
             font-weight: 600;
-            transition: background 0.3s;
-        }
-
-        .file-input-label:hover {
-            background: #764ba2;
-        }
-
-        .file-name {
-            margin-top: 10px;
-            color: #666;
-            font-size: 0.9em;
         }
 
         .form-group {
@@ -107,8 +69,8 @@
         .form-group label {
             display: block;
             margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
+            color: #2d3748;
+            font-weight: 500;
             font-size: 0.95em;
         }
 
@@ -116,20 +78,21 @@
         .form-group textarea,
         .form-group select {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            padding: 11px 13px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
             font-size: 0.95em;
             font-family: inherit;
-            transition: border-color 0.3s;
+            transition: all 0.2s;
+            background: #fff;
         }
 
         .form-group input:focus,
         .form-group textarea:focus,
         .form-group select:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
         }
 
         .form-group textarea {
@@ -137,15 +100,12 @@
             min-height: 80px;
         }
 
-        .grid-view {
-            margin-top: 30px;
-        }
-
         .grid-container {
             overflow-x: auto;
             background: #f8f9fa;
-            border-radius: 5px;
+            border-radius: 8px;
             padding: 15px;
+            border: 1px solid #e2e8f0;
         }
 
         table {
@@ -156,48 +116,48 @@
 
         th {
             background: #ffd700;
-            color: #333;
-            padding: 12px;
+            color: #1a365d;
+            padding: 14px;
             text-align: left;
             font-weight: 600;
             border-bottom: 2px solid #e6b800;
         }
 
         td {
-            padding: 12px;
-            border-bottom: 1px solid #ddd;
+            padding: 12px 14px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #2d3748;
         }
 
         tr:hover {
-            background: #f0f0f0;
+            background: #f7fafc;
         }
 
         .button-group {
             display: flex;
-            gap: 10px;
-            margin-top: 30px;
+            gap: 12px;
+            margin-top: 25px;
         }
 
         button {
             flex: 1;
-            padding: 12px 20px;
+            padding: 11px 20px;
             border: none;
-            border-radius: 5px;
-            font-size: 1em;
-            font-weight: 600;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
         }
 
         .btn-primary {
-            background: #667eea;
+            background: #4299e1;
             color: white;
         }
 
         .btn-primary:hover {
-            background: #764ba2;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            background: #3182ce;
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
         }
 
         .btn-success {
@@ -207,17 +167,16 @@
 
         .btn-success:hover {
             background: #38a169;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
         }
 
         .btn-secondary {
-            background: #cbd5e0;
-            color: #333;
+            background: #e2e8f0;
+            color: #2d3748;
         }
 
         .btn-secondary:hover {
-            background: #a0aec0;
+            background: #cbd5e0;
         }
 
         .btn-danger {
@@ -227,13 +186,15 @@
 
         .btn-danger:hover {
             background: #e53e3e;
+            box-shadow: 0 4px 12px rgba(245, 101, 101, 0.3);
         }
 
         .alert {
-            padding: 15px;
-            border-radius: 5px;
+            padding: 14px 16px;
+            border-radius: 6px;
             margin-bottom: 20px;
             display: none;
+            border-left: 4px solid;
         }
 
         .alert.show {
@@ -241,34 +202,51 @@
         }
 
         .alert-info {
-            background: #bee3f8;
-            color: #2c5282;
-            border: 1px solid #90cdf4;
+            background: #e6f7ff;
+            color: #003d66;
+            border-left-color: #0066cc;
         }
 
         .alert-success {
-            background: #c6f6d5;
-            color: #22543d;
-            border: 1px solid #9ae6b4;
+            background: #e6ffed;
+            color: #003d1a;
+            border-left-color: #00b366;
         }
 
         .alert-error {
-            background: #fed7d7;
-            color: #742a2a;
-            border: 1px solid #fc8181;
+            background: #ffe6e6;
+            color: #660000;
+            border-left-color: #ff0000;
         }
 
         .empty-state {
             text-align: center;
-            padding: 40px 20px;
-            color: #999;
+            padding: 60px 20px;
+            color: #a0aec0;
         }
 
-        .empty-state svg {
-            width: 60px;
-            height: 60px;
+        .empty-state p {
+            font-size: 1.05em;
+        }
+
+        .stats-badge {
+            background: #edf2f7;
+            padding: 12px 16px;
+            border-radius: 6px;
             margin-bottom: 20px;
-            opacity: 0.5;
+            color: #2d3748;
+            font-weight: 500;
+        }
+
+        .row-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .row-actions button {
+            flex: 1;
+            padding: 7px 12px;
+            font-size: 0.8em;
         }
 
         @media (max-width: 768px) {
@@ -280,41 +258,21 @@
                 font-size: 1.8em;
             }
 
+            .panel {
+                padding: 25px;
+            }
+
             .button-group {
                 flex-direction: column;
             }
-        }
-
-        .form-complete {
-            background: #c6f6d5;
-            padding: 15px;
-            border-radius: 5px;
-            color: #22543d;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .form-complete.show {
-            display: block;
-        }
-
-        .row-actions {
-            display: flex;
-            gap: 5px;
-        }
-
-        .row-actions button {
-            flex: 1;
-            padding: 6px 10px;
-            font-size: 0.85em;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>📋 Weld & NDE Log</h1>
-            <p>Interactive Data Entry Form</p>
+            <h1>Weld & NDE Log</h1>
+            <p>Inspection Data Entry System</p>
         </header>
 
         <div id="alert" class="alert"></div>
@@ -322,35 +280,35 @@
         <div class="main-content" id="mainContent">
             <!-- Left Panel: Form Input -->
             <div class="panel">
-                <h2>📝 Answer Questions</h2>
-                <div style="background: #ffeaa7; padding: 12px; border-radius: 5px; margin-bottom: 20px; font-weight: 600; color: #333;">
-                    Answering question set <span id="currentRow">1</span> of <span id="totalRows">∞</span>
+                <h2>Data Entry Form</h2>
+                <div class="stats-badge" id="statsDiv">
+                    Entry <span id="currentRow">1</span> of ∞
                 </div>
 
                 <form id="dataForm">
                     <div id="formFields"></div>
                     <div class="button-group">
-                        <button type="submit" class="btn-primary" id="submitBtn">✅ Save & Next</button>
-                        <button type="reset" class="btn-secondary">🔄 Clear</button>
-                        <button type="button" class="btn-secondary" id="cancelBtn" style="display: none;">❌ Cancel Edit</button>
+                        <button type="submit" class="btn-primary" id="submitBtn">Save & Next</button>
+                        <button type="reset" class="btn-secondary">Clear</button>
+                        <button type="button" class="btn-secondary" id="cancelBtn" style="display: none;">Cancel Edit</button>
                     </div>
                 </form>
             </div>
 
             <!-- Right Panel: Grid View -->
             <div class="panel">
-                <h2>📊 Collected Data</h2>
-                <div style="background: #e6fffa; padding: 12px; border-radius: 5px; margin-bottom: 20px; color: #0b5345;">
+                <h2>Data Grid</h2>
+                <div class="stats-badge">
                     Total entries: <strong id="entryCount">0</strong>
                 </div>
                 <div id="gridContainer" class="grid-container">
                     <div class="empty-state">
-                        <p>Start answering questions to see data here</p>
+                        <p>Start entering data to see entries here</p>
                     </div>
                 </div>
                 <div class="button-group">
-                    <button class="btn-success" id="exportBtn" style="display: none;">⬇️ Export to Excel</button>
-                    <button class="btn-danger" id="clearAllBtn" style="display: none;">🗑️ Clear All</button>
+                    <button class="btn-success" id="exportBtn" style="display: none;">Download Excel</button>
+                    <button class="btn-danger" id="clearAllBtn" style="display: none;">Clear All</button>
                 </div>
             </div>
         </div>
@@ -411,7 +369,7 @@
             clearAllBtn.style.display = 'inline-block';
             dataForm.reset();
             dataForm.elements[0]?.focus();
-            showAlert('✅ Ready to start! Answer the questions below.', 'success');
+            showAlert('Ready to start! Enter inspection data below.', 'success');
         }
 
 
@@ -423,8 +381,8 @@
                 const div = document.createElement('div');
                 div.className = 'form-group';
                 div.innerHTML = `
-                    <label for="field-${idx}">❓ ${header}</label>
-                    <input type="text" id="field-${idx}" name="field-${idx}" placeholder="Enter your answer" autofocus=${idx === 0 ? 'true' : 'false'}>
+                    <label for="field-${idx}">${header}</label>
+                    <input type="text" id="field-${idx}" name="field-${idx}" placeholder="Enter response" autofocus=${idx === 0 ? 'true' : 'false'}>
                 `;
                 formFields.appendChild(div);
             });
@@ -481,13 +439,13 @@
             if (editingIndex !== null) {
                 data[editingIndex] = row;
                 editingIndex = null;
-                submitBtn.textContent = '✅ Save & Next';
+                submitBtn.textContent = 'Save & Next';
                 cancelBtn.style.display = 'none';
-                showAlert('✅ Entry updated!', 'success');
+                showAlert('Entry updated successfully.', 'success');
             } else {
                 // Otherwise add a new row
                 data.push(row);
-                showAlert(`✅ Entry ${data.length} saved! Ready for entry ${data.length + 1}.`, 'success');
+                showAlert(`Entry ${data.length} saved. Ready for entry ${data.length + 1}.`, 'success');
             }
 
             dataForm.reset();
@@ -530,13 +488,13 @@
                 input.value = (row[header] === 'N/A') ? '' : (row[header] || '');
             });
             
-            submitBtn.textContent = '💾 Update Entry';
+            submitBtn.textContent = 'Update Entry';
             cancelBtn.style.display = 'inline-block';
             currentRow.textContent = idx + 1;
             
             window.scrollTo({ top: 0, behavior: 'smooth' });
             document.getElementById('field-0')?.focus();
-            showAlert('Editing entry #' + (idx + 1) + '. Click "Update Entry" to save changes.', 'info');
+            showAlert('Editing entry #' + (idx + 1) + '. Save changes to update.', 'info');
         };
 
         // Export to Excel
@@ -619,7 +577,7 @@
                     XLSX.writeFile(workbook, filename);
                     console.log('=== EXPORT COMPLETED ===');
                     
-                    showAlert(`✅ Excel file "${filename}" downloaded!`, 'success');
+                    showAlert(`Excel file "${filename}" downloaded successfully.`, 'success');
                 }
                 
             } catch (error) {
