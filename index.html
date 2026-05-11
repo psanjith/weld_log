@@ -1153,20 +1153,12 @@
                         }
                     }
 
-                    // Create Excel file with PDF references
+                    // Create Excel file with clickable PDF links
                     const worksheet_data = [];
                     worksheet_data.push(headers);
                     
                     data.forEach((row, idx) => {
-                        const rowArray = headers.map(header => {
-                            const textValue = row[header] || 'N/A';
-                            // If there's a PDF for this field, append the path info
-                            const fileId = row[`${header}_file`];
-                            if (fileId && pdfLinks[Object.keys(pdfLinks).find(key => pdfLinks[key].fileName === textValue)]) {
-                                return textValue + '\n[See PDF folder]';
-                            }
-                            return textValue;
-                        });
+                        const rowArray = headers.map(header => row[header] || 'N/A');
                         worksheet_data.push(rowArray);
                     });
                     
@@ -1187,12 +1179,42 @@
                         };
                     }
                     
-                    // Wrap text in data rows for better readability
+                    // Add hyperlinks to cells with PDFs and style them
+                    for (const cellAddress in pdfLinks) {
+                        const linkInfo = pdfLinks[cellAddress];
+                        const cell = worksheet[cellAddress];
+                        
+                        if (cell) {
+                            // Add hyperlink - use relative path that works when extracted
+                            cell.l = {
+                                Target: linkInfo.path,
+                                Tooltip: `Click to open: ${linkInfo.fileName}`
+                            };
+                            
+                            // Ensure cell value is the filename
+                            cell.v = linkInfo.fileName;
+                            cell.t = 's';
+                            
+                            // Style as blue underlined hyperlink
+                            cell.s = {
+                                font: {
+                                    color: { rgb: '0563C1' },
+                                    underline: 'single'
+                                },
+                                alignment: { wrapText: true, vertical: 'top' }
+                            };
+                        }
+                    }
+                    
+                    // Style non-PDF cells with text wrapping
                     for (let rowIdx = 1; rowIdx <= data.length; rowIdx++) {
                         for (let colIdx = 0; colIdx < headers.length; colIdx++) {
                             const cellAddress = XLSX.utils.encode_cell({ r: rowIdx, c: colIdx });
-                            if (worksheet[cellAddress]) {
-                                worksheet[cellAddress].s = {
+                            const cell = worksheet[cellAddress];
+                            
+                            // Skip if already styled (PDF hyperlink)
+                            if (cell && !cell.l) {
+                                cell.s = {
                                     alignment: { wrapText: true, vertical: 'top' }
                                 };
                             }
@@ -1205,25 +1227,28 @@
                     const readmeData = [
                         ['PDF ATTACHMENT GUIDE'],
                         [],
-                        ['After extracting this ZIP file, you will see:'],
-                        ['- Weld-NDE-Log.xlsx (your data)'],
-                        ['- PDFs/ folder (organized by row and field)'],
+                        ['IMPORTANT: PDF files appear as BLUE LINKS in the Excel spreadsheet'],
                         [],
-                        ['HOW TO ACCESS PDFs:'],
-                        ['1. Extract this ZIP file completely'],
-                        ['2. Look in the PDFs folder'],
-                        ['3. Navigate to the Row and field folder'],
-                        ['4. Open the PDF file'],
+                        ['HOW TO OPEN PDFs:'],
+                        ['1. Extract this ZIP file completely to your computer'],
+                        ['2. Open the Weld-NDE-Log.xlsx file in Excel'],
+                        ['3. HOLD CTRL and CLICK on any BLUE PDF link in the spreadsheet'],
+                        ['4. The PDF will open automatically'],
                         [],
-                        ['FILE STRUCTURE:'],
-                        ['PDFs/'],
-                        ['  Row-1/'],
-                        ['    document.pdf'],
-                        ['  Row-2/'],
-                        ['    drawing.pdf'],
-                        ['    report.pdf'],
+                        ['FILE STRUCTURE (for reference):'],
+                        ['Weld-NDE-Log.xlsx - Main spreadsheet (blue links are clickable)'],
+                        ['PDFs/ folder - Contains all PDF documents organized by row'],
+                        ['  Row-1/ - PDFs for first data entry'],
+                        ['  Row-2/ - PDFs for second data entry'],
+                        ['  etc.'],
                         [],
-                        ['PDF LOCATIONS BY ROW:']
+                        ['TROUBLESHOOTING:'],
+                        ['- Make sure you EXTRACTED the ZIP completely'],
+                        ['- Do NOT open Excel files from inside the ZIP'],
+                        ['- Keep the PDFs folder in the same directory as the Excel file'],
+                        ['- Use CTRL+Click on the link to open the PDF'],
+                        [],
+                        ['PDF INVENTORY:']
                     ];
                     
                     // Add PDF inventory to README
@@ -1231,19 +1256,22 @@
                         const parts = cellAddress.match(/([A-Z]+)(\d+)/);
                         if (parts) {
                             const rowNum = parseInt(parts[2]);
+                            const colLetter = parts[1];
+                            const colIdx = XLSX.utils.decode_col(colLetter);
+                            const header = headers[colIdx];
                             const linkInfo = pdfLinks[cellAddress];
-                            readmeData.push([`Row ${rowNum}: ${linkInfo.path}`]);
+                            readmeData.push([`Row ${rowNum}, ${header}: ${linkInfo.fileName}`]);
                         }
                     }
                     
                     const readmeSheet = XLSX.utils.aoa_to_sheet(readmeData);
-                    readmeSheet['!cols'] = [{ wch: 50 }];
+                    readmeSheet['!cols'] = [{ wch: 60 }];
                     
                     // Style README title
                     if (readmeSheet['A1']) {
                         readmeSheet['A1'].s = {
-                            font: { bold: true, size: 14, color: { rgb: '000000' } },
-                            fill: { fgColor: { rgb: 'E8F4F8' }, patternType: 'solid' }
+                            font: { bold: true, size: 14, color: { rgb: 'FFFFFF' } },
+                            fill: { fgColor: { rgb: '4299E1' }, patternType: 'solid' }
                         };
                     }
                     
@@ -1257,24 +1285,19 @@
                     const readmeText = `WELD LOG - PDF ATTACHMENT GUIDE
 ================================
 
-IMPORTANT: After downloading, extract this ZIP file completely!
+IMPORTANT: To use the PDF links in Excel, you MUST:
+1. Extract this ZIP file completely to your computer
+2. HOLD CTRL and CLICK on any BLUE link in the Excel file
+3. The PDF will open directly
 
-FOLDER STRUCTURE:
-- Weld-NDE-Log.xlsx (main spreadsheet)
-- PDFs/ (folder with all attached documents)
-  - Row-1/ (PDFs for first data row)
-  - Row-2/ (PDFs for second data row)
+Files are organized as:
+- Weld-NDE-Log.xlsx (with blue PDF links)
+- PDFs/ folder (all documents organized by row)
+  - Row-1/
+  - Row-2/
   - etc.
 
-HOW TO ACCESS YOUR PDFs:
-1. Right-click this ZIP file and select "Extract All" or use your ZIP tool
-2. After extraction, navigate to the PDFs folder
-3. Open the Row folder that corresponds to your data
-4. Find your PDF file inside
-
-The PDF filenames are stored in the Excel file so you know which files go with which entries.
-
-Questions? Check the "PDF Guide" sheet in the Excel file for a complete inventory.`;
+Keep the PDFs folder in the same directory as the Excel file for links to work!`;
                     
                     zip.file('READ_ME.txt', readmeText);
                     
@@ -1288,7 +1311,7 @@ Questions? Check the "PDF Guide" sheet in the Excel file for a complete inventor
                     link.click();
                     URL.revokeObjectURL(url);
                     
-                    showAlert(`ZIP downloaded! Extract it to access PDFs in organized folders. See the PDF Guide sheet in Excel for details.`, 'success');
+                    showAlert(`ZIP downloaded! Extract it, then CTRL+Click the blue PDF links in Excel to open them.`, 'success');
                 } catch (error) {
                     console.error('Export error:', error);
                     showAlert('Export failed: ' + error.message, 'error');
