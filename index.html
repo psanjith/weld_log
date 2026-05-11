@@ -1153,18 +1153,26 @@
                         }
                     }
 
-                    // Create Excel file with hyperlinks
+                    // Create Excel file with PDF references
                     const worksheet_data = [];
                     worksheet_data.push(headers);
                     
                     data.forEach((row, idx) => {
-                        const rowArray = headers.map(header => row[header] || 'N/A');
+                        const rowArray = headers.map(header => {
+                            const textValue = row[header] || 'N/A';
+                            // If there's a PDF for this field, append the path info
+                            const fileId = row[`${header}_file`];
+                            if (fileId && pdfLinks[Object.keys(pdfLinks).find(key => pdfLinks[key].fileName === textValue)]) {
+                                return textValue + '\n[See PDF folder]';
+                            }
+                            return textValue;
+                        });
                         worksheet_data.push(rowArray);
                     });
                     
                     const workbook = XLSX.utils.book_new();
                     const worksheet = XLSX.utils.aoa_to_sheet(worksheet_data);
-                    worksheet['!cols'] = headers.map(() => ({ wch: 25 }));
+                    worksheet['!cols'] = headers.map(() => ({ wch: 30 }));
                     
                     // Style header row - yellow background
                     for (let col = 0; col < headers.length; col++) {
@@ -1179,36 +1187,96 @@
                         };
                     }
                     
-                    // Add hyperlinks to cells with PDFs
-                    for (const cellAddress in pdfLinks) {
-                        const linkInfo = pdfLinks[cellAddress];
-                        const cell = worksheet[cellAddress];
-                        
-                        if (cell) {
-                            const fileName = linkInfo.fileName;
-                            cell.l = { 
-                                Target: linkInfo.path,
-                                Tooltip: fileName
-                            };
-                            cell.t = 's';
-                            if (!cell.v) {
-                                cell.v = fileName;
+                    // Wrap text in data rows for better readability
+                    for (let rowIdx = 1; rowIdx <= data.length; rowIdx++) {
+                        for (let colIdx = 0; colIdx < headers.length; colIdx++) {
+                            const cellAddress = XLSX.utils.encode_cell({ r: rowIdx, c: colIdx });
+                            if (worksheet[cellAddress]) {
+                                worksheet[cellAddress].s = {
+                                    alignment: { wrapText: true, vertical: 'top' }
+                                };
                             }
-                            cell.s = {
-                                font: { 
-                                    color: { rgb: '0563C1' }, 
-                                    underline: 'single'
-                                },
-                                alignment: { wrapText: true }
-                            };
                         }
                     }
                     
                     XLSX.utils.book_append_sheet(workbook, worksheet, 'Weld Log');
                     
+                    // Create README sheet with PDF locations
+                    const readmeData = [
+                        ['PDF ATTACHMENT GUIDE'],
+                        [],
+                        ['After extracting this ZIP file, you will see:'],
+                        ['- Weld-NDE-Log.xlsx (your data)'],
+                        ['- PDFs/ folder (organized by row and field)'],
+                        [],
+                        ['HOW TO ACCESS PDFs:'],
+                        ['1. Extract this ZIP file completely'],
+                        ['2. Look in the PDFs folder'],
+                        ['3. Navigate to the Row and field folder'],
+                        ['4. Open the PDF file'],
+                        [],
+                        ['FILE STRUCTURE:'],
+                        ['PDFs/'],
+                        ['  Row-1/'],
+                        ['    document.pdf'],
+                        ['  Row-2/'],
+                        ['    drawing.pdf'],
+                        ['    report.pdf'],
+                        [],
+                        ['PDF LOCATIONS BY ROW:']
+                    ];
+                    
+                    // Add PDF inventory to README
+                    for (const cellAddress in pdfLinks) {
+                        const parts = cellAddress.match(/([A-Z]+)(\d+)/);
+                        if (parts) {
+                            const rowNum = parseInt(parts[2]);
+                            const linkInfo = pdfLinks[cellAddress];
+                            readmeData.push([`Row ${rowNum}: ${linkInfo.path}`]);
+                        }
+                    }
+                    
+                    const readmeSheet = XLSX.utils.aoa_to_sheet(readmeData);
+                    readmeSheet['!cols'] = [{ wch: 50 }];
+                    
+                    // Style README title
+                    if (readmeSheet['A1']) {
+                        readmeSheet['A1'].s = {
+                            font: { bold: true, size: 14, color: { rgb: '000000' } },
+                            fill: { fgColor: { rgb: 'E8F4F8' }, patternType: 'solid' }
+                        };
+                    }
+                    
+                    XLSX.utils.book_append_sheet(workbook, readmeSheet, 'PDF Guide');
+                    
                     // Write Excel to blob
                     const excelBlob = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
                     zip.file('Weld-NDE-Log.xlsx', excelBlob);
+                    
+                    // Add a text README file to ZIP root
+                    const readmeText = `WELD LOG - PDF ATTACHMENT GUIDE
+================================
+
+IMPORTANT: After downloading, extract this ZIP file completely!
+
+FOLDER STRUCTURE:
+- Weld-NDE-Log.xlsx (main spreadsheet)
+- PDFs/ (folder with all attached documents)
+  - Row-1/ (PDFs for first data row)
+  - Row-2/ (PDFs for second data row)
+  - etc.
+
+HOW TO ACCESS YOUR PDFs:
+1. Right-click this ZIP file and select "Extract All" or use your ZIP tool
+2. After extraction, navigate to the PDFs folder
+3. Open the Row folder that corresponds to your data
+4. Find your PDF file inside
+
+The PDF filenames are stored in the Excel file so you know which files go with which entries.
+
+Questions? Check the "PDF Guide" sheet in the Excel file for a complete inventory.`;
+                    
+                    zip.file('READ_ME.txt', readmeText);
                     
                     // Generate ZIP file
                     const timestamp = new Date().toISOString().slice(0, 10);
@@ -1220,7 +1288,7 @@
                     link.click();
                     URL.revokeObjectURL(url);
                     
-                    showAlert(`ZIP file downloaded with ${pdfCount} PDF(s).`, 'success');
+                    showAlert(`ZIP downloaded! Extract it to access PDFs in organized folders. See the PDF Guide sheet in Excel for details.`, 'success');
                 } catch (error) {
                     console.error('Export error:', error);
                     showAlert('Export failed: ' + error.message, 'error');
