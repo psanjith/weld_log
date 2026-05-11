@@ -519,6 +519,7 @@
                 </div>
                 <div class="button-group">
                     <button class="btn-success" id="exportBtn" style="display: none;">Download Excel</button>
+                    <button class="btn-success" id="exportWithPdfsBtn" style="display: none;">Download with PDFs</button>
                 </div>
                 
                 <!-- Log Management Section -->
@@ -541,6 +542,8 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@latest/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3/dist/jszip.min.js"></script>
     <script>
         // Default questions from the Excel file top row
         const defaultHeaders = [
@@ -654,6 +657,7 @@
         const dataForm = document.getElementById('dataForm');
         const gridContainer = document.getElementById('gridContainer');
         const exportBtn = document.getElementById('exportBtn');
+        const exportWithPdfsBtn = document.getElementById('exportWithPdfsBtn');
         const alert = document.getElementById('alert');
         
         // Log management elements
@@ -737,6 +741,7 @@
                 renderLogSelector();
                 logManagement.style.display = 'block';
                 exportBtn.style.display = 'inline-block';
+                exportWithPdfsBtn.style.display = 'inline-block';
                 renderGrid();
                 dataForm.reset();
                 dataForm.elements[0]?.focus();
@@ -1101,6 +1106,110 @@
                 console.error('Error message:', error.message);
                 console.error('Error stack:', error.stack);
                 showAlert('Export failed: ' + error.message, 'error');
+            }
+        });
+
+        // Export with PDFs as ZIP
+        exportWithPdfsBtn.addEventListener('click', async function() {
+            if (data.length === 0) {
+                showAlert('No data to export', 'error');
+                return;
+            }
+
+            if (typeof JSZip === 'undefined') {
+                showAlert('ZIP library loading... Please wait.', 'info');
+                setTimeout(() => {
+                    if (typeof JSZip !== 'undefined') {
+                        performZipExport();
+                    } else {
+                        showAlert('ZIP library failed to load. Try refreshing the page.', 'error');
+                    }
+                }, 2000);
+                return;
+            }
+
+            performZipExport();
+
+            async function performZipExport() {
+                try {
+                    showAlert('Creating ZIP file with PDFs...', 'info');
+                    
+                    // Create ZIP
+                    const zip = new JSZip();
+
+                    // Create Excel file
+                    const worksheet_data = [];
+                    worksheet_data.push(headers);
+                    
+                    data.forEach((row, idx) => {
+                        const rowArray = headers.map(header => row[header] || 'N/A');
+                        worksheet_data.push(rowArray);
+                    });
+                    
+                    const workbook = XLSX.utils.book_new();
+                    const worksheet = XLSX.utils.aoa_to_sheet(worksheet_data);
+                    worksheet['!cols'] = headers.map(() => ({ wch: 20 }));
+                    
+                    // Style header row - yellow background
+                    for (let col = 0; col < headers.length; col++) {
+                        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+                        if (!worksheet[cellAddress]) {
+                            worksheet[cellAddress] = { t: 's', v: headers[col] };
+                        }
+                        worksheet[cellAddress].s = {
+                            fill: { fgColor: { rgb: 'FFFF00' }, patternType: 'solid' },
+                            font: { bold: true, color: { rgb: '000000' } },
+                            alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+                        };
+                    }
+                    
+                    XLSX.utils.book_append_sheet(workbook, worksheet, 'Weld Log');
+                    
+                    // Write Excel to blob
+                    const excelBlob = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+                    zip.file('Weld-NDE-Log.xlsx', excelBlob);
+                    
+                    // Collect all PDFs from data
+                    const pdfFolder = zip.folder('PDFs');
+                    let pdfCount = 0;
+                    
+                    for (let rowIdx = 0; rowIdx < data.length; rowIdx++) {
+                        const row = data[rowIdx];
+                        const rowFolder = pdfFolder.folder(`Row-${rowIdx + 1}`);
+                        
+                        for (let colIdx = 0; colIdx < headers.length; colIdx++) {
+                            const header = headers[colIdx];
+                            const fileId = row[`${header}_file`];
+                            
+                            if (fileId) {
+                                try {
+                                    const fileData = await getFile(fileId);
+                                    if (fileData) {
+                                        rowFolder.file(fileData.name, fileData.data);
+                                        pdfCount++;
+                                    }
+                                } catch (err) {
+                                    console.error(`Error adding PDF for ${header}:`, err);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Generate ZIP file
+                    const timestamp = new Date().toISOString().slice(0, 10);
+                    const zipBlob = await zip.generateAsync({ type: 'blob' });
+                    const url = URL.createObjectURL(zipBlob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `Weld-NDE-Log-${timestamp}.zip`;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                    
+                    showAlert(`ZIP file downloaded with ${pdfCount} PDF(s) attached.`, 'success');
+                } catch (error) {
+                    console.error('ZIP export error:', error);
+                    showAlert('Export failed: ' + error.message, 'error');
+                }
             }
         });
 
