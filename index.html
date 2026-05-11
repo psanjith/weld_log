@@ -1156,7 +1156,7 @@
                                     if (fileData) {
                                         rowFolder.file(fileData.name, fileData.data);
                                         
-                                        // Store the link info
+                                        // Store the link info - use relative path that works in ZIP
                                         const excelRowIdx = rowIdx + 1; // +1 for header row
                                         const cellAddress = XLSX.utils.encode_cell({ r: excelRowIdx, c: colIdx });
                                         pdfLinks[cellAddress] = {
@@ -1208,11 +1208,28 @@
                         const cell = worksheet[cellAddress];
                         
                         if (cell) {
-                            // Add hyperlink
-                            cell.l = { Target: linkInfo.path };
-                            // Style as hyperlink (blue, underlined)
+                            // Create proper hyperlink structure for XLSX
+                            const fileName = linkInfo.fileName;
+                            
+                            // Store hyperlink with relative path that works in ZIP
+                            cell.l = { 
+                                Target: linkInfo.path,
+                                Tooltip: fileName
+                            };
+                            
+                            // Keep the original text but style as hyperlink
+                            cell.t = 's'; // String type
+                            if (!cell.v) {
+                                cell.v = fileName;
+                            }
+                            
+                            // Style as blue underlined link
                             cell.s = {
-                                font: { color: { rgb: '0563C1' }, underline: true }
+                                font: { 
+                                    color: { rgb: '0563C1' }, 
+                                    underline: 'single'
+                                },
+                                alignment: { wrapText: true }
                             };
                         }
                     }
