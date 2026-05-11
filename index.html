@@ -1132,44 +1132,13 @@
 
             async function performZipExport() {
                 try {
-                    showAlert('Creating ZIP file with PDFs...', 'info');
+                    showAlert('Creating ZIP file with PDFs and links...', 'info');
                     
                     // Create ZIP
                     const zip = new JSZip();
 
-                    // Create Excel file
-                    const worksheet_data = [];
-                    worksheet_data.push(headers);
-                    
-                    data.forEach((row, idx) => {
-                        const rowArray = headers.map(header => row[header] || 'N/A');
-                        worksheet_data.push(rowArray);
-                    });
-                    
-                    const workbook = XLSX.utils.book_new();
-                    const worksheet = XLSX.utils.aoa_to_sheet(worksheet_data);
-                    worksheet['!cols'] = headers.map(() => ({ wch: 20 }));
-                    
-                    // Style header row - yellow background
-                    for (let col = 0; col < headers.length; col++) {
-                        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
-                        if (!worksheet[cellAddress]) {
-                            worksheet[cellAddress] = { t: 's', v: headers[col] };
-                        }
-                        worksheet[cellAddress].s = {
-                            fill: { fgColor: { rgb: 'FFFF00' }, patternType: 'solid' },
-                            font: { bold: true, color: { rgb: '000000' } },
-                            alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
-                        };
-                    }
-                    
-                    XLSX.utils.book_append_sheet(workbook, worksheet, 'Weld Log');
-                    
-                    // Write Excel to blob
-                    const excelBlob = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-                    zip.file('Weld-NDE-Log.xlsx', excelBlob);
-                    
-                    // Collect all PDFs from data
+                    // Collect PDF information first
+                    const pdfLinks = {}; // Will store cell addresses with PDF links
                     const pdfFolder = zip.folder('PDFs');
                     let pdfCount = 0;
                     
@@ -1186,6 +1155,14 @@
                                     const fileData = await getFile(fileId);
                                     if (fileData) {
                                         rowFolder.file(fileData.name, fileData.data);
+                                        
+                                        // Store the link info
+                                        const excelRowIdx = rowIdx + 1; // +1 for header row
+                                        const cellAddress = XLSX.utils.encode_cell({ r: excelRowIdx, c: colIdx });
+                                        pdfLinks[cellAddress] = {
+                                            fileName: fileData.name,
+                                            path: `PDFs/Row-${rowIdx + 1}/${fileData.name}`
+                                        };
                                         pdfCount++;
                                     }
                                 } catch (err) {
@@ -1194,6 +1171,57 @@
                             }
                         }
                     }
+
+                    // Create Excel file with hyperlinks
+                    const worksheet_data = [];
+                    worksheet_data.push(headers);
+                    
+                    data.forEach((row, idx) => {
+                        const rowArray = headers.map(header => {
+                            const textValue = row[header] || 'N/A';
+                            // Return plain value; will add hyperlink styling after
+                            return textValue;
+                        });
+                        worksheet_data.push(rowArray);
+                    });
+                    
+                    const workbook = XLSX.utils.book_new();
+                    const worksheet = XLSX.utils.aoa_to_sheet(worksheet_data);
+                    worksheet['!cols'] = headers.map(() => ({ wch: 25 }));
+                    
+                    // Style header row - yellow background
+                    for (let col = 0; col < headers.length; col++) {
+                        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+                        if (!worksheet[cellAddress]) {
+                            worksheet[cellAddress] = { t: 's', v: headers[col] };
+                        }
+                        worksheet[cellAddress].s = {
+                            fill: { fgColor: { rgb: 'FFFF00' }, patternType: 'solid' },
+                            font: { bold: true, color: { rgb: '000000' } },
+                            alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+                        };
+                    }
+                    
+                    // Add hyperlinks to cells with PDFs
+                    for (const cellAddress in pdfLinks) {
+                        const linkInfo = pdfLinks[cellAddress];
+                        const cell = worksheet[cellAddress];
+                        
+                        if (cell) {
+                            // Add hyperlink
+                            cell.l = { Target: linkInfo.path };
+                            // Style as hyperlink (blue, underlined)
+                            cell.s = {
+                                font: { color: { rgb: '0563C1' }, underline: true }
+                            };
+                        }
+                    }
+                    
+                    XLSX.utils.book_append_sheet(workbook, worksheet, 'Weld Log');
+                    
+                    // Write Excel to blob
+                    const excelBlob = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+                    zip.file('Weld-NDE-Log.xlsx', excelBlob);
                     
                     // Generate ZIP file
                     const timestamp = new Date().toISOString().slice(0, 10);
@@ -1205,7 +1233,7 @@
                     link.click();
                     URL.revokeObjectURL(url);
                     
-                    showAlert(`ZIP file downloaded with ${pdfCount} PDF(s) attached.`, 'success');
+                    showAlert(`ZIP file downloaded with ${pdfCount} PDF(s) as clickable links.`, 'success');
                 } catch (error) {
                     console.error('ZIP export error:', error);
                     showAlert('Export failed: ' + error.message, 'error');
