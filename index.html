@@ -1301,6 +1301,157 @@ Keep the PDFs folder in the same directory as the Excel file for links to work!`
                     
                     zip.file('READ_ME.txt', readmeText);
                     
+                    // Create HTML PDF viewer/index
+                    const pdfListHTML = Object.entries(pdfLinks)
+                        .map(([cellAddr, linkInfo]) => {
+                            const parts = cellAddr.match(/([A-Z]+)(\d+)/);
+                            const rowNum = parts ? parseInt(parts[2]) : '?';
+                            const colLetter = parts ? parts[1] : '';
+                            const colIdx = colLetter ? XLSX.utils.decode_col(colLetter) : 0;
+                            const fieldName = headers[colIdx] || 'Unknown';
+                            const pdfPath = linkInfo.path; // e.g., 'PDFs/Row-1/filename.pdf'
+                            return `<tr><td>${rowNum}</td><td>${fieldName}</td><td><a href="${pdfPath}" target="_blank" class="pdf-link">📄 ${linkInfo.fileName}</a></td></tr>`;
+                        })
+                        .join('');
+                    
+                    const indexHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weld Log - PDF Manager</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #4299e1 0%, #667eea 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2em; margin-bottom: 10px; }
+        .header p { font-size: 1.1em; opacity: 0.9; }
+        .content {
+            padding: 40px;
+        }
+        .info-box {
+            background: #f0f7ff;
+            border-left: 4px solid #4299e1;
+            padding: 15px;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+        .info-box strong { color: #4299e1; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        thead {
+            background: #f5f7fa;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        tr:hover { background: #f9fafb; }
+        .pdf-link {
+            color: #4299e1;
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 2px solid #4299e1;
+            transition: all 0.2s;
+        }
+        .pdf-link:hover {
+            color: #2d5aa6;
+            background: #eef6fc;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+        .empty-state p { margin: 10px 0; }
+        .badge {
+            display: inline-block;
+            background: #48bb78;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+        .footer {
+            background: #f5f7fa;
+            padding: 20px;
+            text-align: center;
+            color: #718096;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Weld Log PDF Manager</h1>
+            <p>All your attached PDFs in one place</p>
+        </div>
+        <div class="content">
+            <div class="info-box">
+                <strong>✅ Quick Start:</strong> Click any PDF link below to open it. All files are organized and ready to use!
+            </div>
+            ${pdfListHTML ? `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Row #</th>
+                        <th>Field</th>
+                        <th><span class="badge">${Object.keys(pdfLinks).length} PDFs</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${pdfListHTML}
+                </tbody>
+            </table>
+            ` : `
+            <div class="empty-state">
+                <p>📭 No PDFs attached to this log</p>
+                <p style="font-size: 0.9em; color: #a0aec0;">Upload PDFs when creating your weld log to see them here</p>
+            </div>
+            `}
+        </div>
+        <div class="footer">
+            Keep this folder structure intact for all links to work properly.
+            📁 PDFs/ folder must stay with this file.
+        </div>
+    </div>
+</body>
+</html>`;
+                    
+                    zip.file('VIEW_PDFS.html', indexHTML);
+                    
                     // Generate ZIP file
                     const timestamp = new Date().toISOString().slice(0, 10);
                     const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -1311,7 +1462,7 @@ Keep the PDFs folder in the same directory as the Excel file for links to work!`
                     link.click();
                     URL.revokeObjectURL(url);
                     
-                    showAlert(`ZIP downloaded! Extract it, then CTRL+Click the blue PDF links in Excel to open them.`, 'success');
+                    showAlert(`✅ ZIP downloaded! Extract it and open VIEW_PDFS.html to click-open all your PDFs.`, 'success');
                 } catch (error) {
                     console.error('Export error:', error);
                     showAlert('Export failed: ' + error.message, 'error');
