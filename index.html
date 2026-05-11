@@ -77,7 +77,6 @@
         .form-group input,
         .form-group textarea,
         .form-group select {
-            width: 100%;
             padding: 11px 13px;
             border: 1px solid #cbd5e0;
             border-radius: 6px;
@@ -87,9 +86,15 @@
             background: #fff;
         }
 
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+        }
+
         .form-group input:focus,
         .form-group textarea:focus,
-        .form-group select:focus {
+        .form-group select:focus,
+        .text-input:focus {
             outline: none;
             border-color: #4299e1;
             box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
@@ -110,6 +115,17 @@
         .text-input {
             flex: 1;
             min-width: 0;
+            padding: 11px 13px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 0.95em;
+            background: #fff;
+            color: #2d3748;
+            font-family: inherit;
+        }
+
+        .text-input::placeholder {
+            color: #a0aec0;
         }
 
         .file-upload {
