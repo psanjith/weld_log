@@ -492,7 +492,21 @@
                 </div>
                 <div class="button-group">
                     <button class="btn-success" id="exportBtn" style="display: none;">Download Excel</button>
-                    <button class="btn-danger" id="clearAllBtn" style="display: none;">Clear All</button>
+                </div>
+                
+                <!-- Log Management Section -->
+                <div id="logManagement" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 6px; display: none;">
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: block; margin-bottom: 8px; color: #2d3748; font-weight: 500; font-size: 0.9em;">Select Log:</label>
+                        <select id="logSelector" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.9em;">
+                            <option value="">-- Create New Log --</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn-primary" id="saveLogBtn" style="flex: 1; min-width: 100px; font-size: 0.9em;">Save Log</button>
+                        <button class="btn-secondary" id="newLogBtn" style="flex: 1; min-width: 100px; font-size: 0.9em;">New Log</button>
+                        <button class="btn-danger" id="deleteLogBtn" style="flex: 1; min-width: 100px; font-size: 0.9em; display: none;">Delete Log</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -539,8 +553,15 @@
         const dataForm = document.getElementById('dataForm');
         const gridContainer = document.getElementById('gridContainer');
         const exportBtn = document.getElementById('exportBtn');
-        const clearAllBtn = document.getElementById('clearAllBtn');
         const alert = document.getElementById('alert');
+        
+        // Log management elements
+        const logManagement = document.getElementById('logManagement');
+        const logSelector = document.getElementById('logSelector');
+        const saveLogBtn = document.getElementById('saveLogBtn');
+        const newLogBtn = document.getElementById('newLogBtn');
+        const deleteLogBtn = document.getElementById('deleteLogBtn');
+        let currentLogId = null;
         const currentRow = document.getElementById('currentRow');
         const entryCount = document.getElementById('entryCount');
         const mainContent = document.getElementById('mainContent');
@@ -566,13 +587,54 @@
             localStorage.setItem('weld_log_questions', JSON.stringify(headers));
         }
 
+        // Load all saved logs from localStorage
+        function loadSavedLogs() {
+            const saved = localStorage.getItem('weld_logs');
+            return saved ? JSON.parse(saved) : [];
+        }
+
+        // Save logs list to localStorage
+        function saveLogs(logs) {
+            localStorage.setItem('weld_logs', JSON.stringify(logs));
+        }
+
+        // Load data for a specific log
+        function loadLogData(logId) {
+            if (!logId) {
+                data = [];
+                return;
+            }
+            const saved = localStorage.getItem(`weld_log_data_${logId}`);
+            data = saved ? JSON.parse(saved) : [];
+            currentLogId = logId;
+        }
+
+        // Save current log data to localStorage
+        function saveLogData() {
+            if (!currentLogId) return;
+            localStorage.setItem(`weld_log_data_${currentLogId}`, JSON.stringify(data));
+        }
+
+        // Render log selector dropdown
+        function renderLogSelector() {
+            const logs = loadSavedLogs();
+            const options = '<option value="">-- Create New Log --</option>' +
+                logs.map(log => `<option value="${log.id}">${log.name}</option>`).join('');
+            logSelector.innerHTML = options;
+            if (currentLogId) {
+                logSelector.value = currentLogId;
+            }
+            deleteLogBtn.style.display = currentLogId ? 'inline-block' : 'none';
+        }
+
         // Initialize app on load
         function initializeApp() {
             loadQuestions();
             renderForm();
-            renderGrid();
+            renderLogSelector();
+            logManagement.style.display = 'block';
             exportBtn.style.display = 'inline-block';
-            clearAllBtn.style.display = 'inline-block';
+            renderGrid();
             dataForm.reset();
             dataForm.elements[0]?.focus();
             showAlert('Ready to start! Enter inspection data below.', 'success');
@@ -615,6 +677,7 @@
             }
 
             saveQuestions();
+            saveLogData();
             newQuestionInput.value = '';
             renderQuestionsList();
             renderForm();
@@ -659,6 +722,7 @@
                     }
                 });
                 saveQuestions();
+                saveLogData();
                 renderQuestionsList();
                 renderForm();
                 renderGrid();
@@ -742,6 +806,7 @@
                 showAlert(`Entry ${data.length} saved. Ready for entry ${data.length + 1}.`, 'success');
             }
 
+            saveLogData();
             dataForm.reset();
             renderGrid();
             currentRow.textContent = data.length + 1;
@@ -766,6 +831,7 @@
         window.deleteRow = function(idx) {
             if (confirm('Delete this entry?')) {
                 data.splice(idx, 1);
+                saveLogData();
                 renderGrid();
                 currentRow.textContent = data.length + 1;
                 showAlert('Entry deleted', 'success');
@@ -882,19 +948,104 @@
             }
         });
 
-        // Clear all data
-        clearAllBtn.addEventListener('click', function() {
-            if (confirm('Clear all entries?')) {
-                data = [];
-                editingIndex = null;
-                dataForm.reset();
-                renderGrid();
-                currentRow.textContent = '1';
-                submitBtn.textContent = '✅ Save & Next';
-                cancelBtn.style.display = 'none';
-                document.getElementById('field-0')?.focus();
-                showAlert('All data cleared', 'success');
+        // Save Log
+        saveLogBtn.addEventListener('click', function() {
+            if (data.length === 0) {
+                showAlert('No data to save. Enter some records first.', 'error');
+                return;
             }
+
+            if (currentLogId) {
+                // Save to existing log
+                saveLogData();
+                showAlert('Log saved successfully!', 'success');
+            } else {
+                // Create new log with name
+                const logName = prompt('Enter a name for this log (e.g., "Weld Batch 001"):', `Log - ${new Date().toLocaleDateString()}`);
+                if (!logName) {
+                    showAlert('Save cancelled', 'info');
+                    return;
+                }
+
+                const logId = Date.now().toString();
+                const logs = loadSavedLogs();
+                logs.push({
+                    id: logId,
+                    name: logName,
+                    timestamp: new Date().toISOString(),
+                    entryCount: data.length
+                });
+                saveLogs(logs);
+                saveLogData();
+                currentLogId = logId;
+                renderLogSelector();
+                showAlert(`Log "${logName}" saved with ${data.length} entries!`, 'success');
+            }
+        });
+
+        // New Log
+        newLogBtn.addEventListener('click', function() {
+            if (data.length > 0) {
+                if (!confirm('You have unsaved data. Create a new log anyway?')) {
+                    return;
+                }
+            }
+            data = [];
+            currentLogId = null;
+            editingIndex = null;
+            dataForm.reset();
+            renderGrid();
+            currentRow.textContent = '1';
+            submitBtn.textContent = '✅ Save & Next';
+            cancelBtn.style.display = 'none';
+            document.getElementById('field-0')?.focus();
+            renderLogSelector();
+            showAlert('New log created. Start entering data!', 'success');
+        });
+
+        // Delete Log
+        deleteLogBtn.addEventListener('click', function() {
+            if (!currentLogId) return;
+            if (!confirm('Delete this log? This action cannot be undone.')) {
+                return;
+            }
+            const logs = loadSavedLogs();
+            const updatedLogs = logs.filter(log => log.id !== currentLogId);
+            saveLogs(updatedLogs);
+            localStorage.removeItem(`weld_log_data_${currentLogId}`);
+            data = [];
+            currentLogId = null;
+            renderLogSelector();
+            renderGrid();
+            currentRow.textContent = '1';
+            dataForm.reset();
+            showAlert('Log deleted', 'success');
+        });
+
+        // Switch Log
+        logSelector.addEventListener('change', function() {
+            if (!this.value) {
+                // Create new log option selected
+                newLogBtn.click();
+                return;
+            }
+
+            if (data.length > 0 && currentLogId !== this.value) {
+                if (!confirm('Switch logs without saving? You have unsaved data.')) {
+                    renderLogSelector();
+                    return;
+                }
+            }
+
+            loadLogData(this.value);
+            editingIndex = null;
+            dataForm.reset();
+            renderGrid();
+            currentRow.textContent = data.length + 1;
+            submitBtn.textContent = '✅ Save & Next';
+            cancelBtn.style.display = 'none';
+            renderLogSelector();
+            showAlert(`Log loaded with ${data.length} entries`, 'success');
         });
 
         // Show alert
