@@ -252,6 +252,164 @@
             font-size: 0.8em;
         }
 
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 35px;
+            border-radius: 10px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .modal-content h2 {
+            color: #1a365d;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+
+        .questions-list {
+            margin-bottom: 30px;
+        }
+
+        .question-item {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .question-item span {
+            color: #2d3748;
+            font-weight: 500;
+        }
+
+        .question-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .question-item-actions button {
+            padding: 6px 12px;
+            font-size: 0.8em;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .question-item button.edit-btn {
+            background: #4299e1;
+            color: white;
+        }
+
+        .question-item button.edit-btn:hover {
+            background: #3182ce;
+        }
+
+        .question-item button.delete-btn {
+            background: #f56565;
+            color: white;
+        }
+
+        .question-item button.delete-btn:hover {
+            background: #e53e3e;
+        }
+
+        .add-question-form {
+            background: #edf2f7;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .add-question-form .form-group {
+            margin-bottom: 12px;
+        }
+
+        .add-question-form input {
+            padding: 10px 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+            width: 100%;
+            font-size: 0.95em;
+        }
+
+        .add-question-form button {
+            width: 100%;
+            padding: 10px;
+            background: #48bb78;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .add-question-form button:hover {
+            background: #38a169;
+        }
+
+        .modal-close-btn {
+            background: #e2e8f0;
+            color: #2d3748;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            width: 100%;
+            transition: all 0.2s;
+        }
+
+        .modal-close-btn:hover {
+            background: #cbd5e0;
+        }
+
+        .header-actions {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .manage-questions-btn {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .manage-questions-btn:hover {
+            background: #3182ce;
+        }
+
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -276,7 +434,30 @@
         <header>
             <h1>Weld & NDE Log</h1>
             <p>Inspection Data Entry System</p>
+            <div class="header-actions">
+                <button class="manage-questions-btn" id="manageQuestionsBtn">Manage Questions</button>
+            </div>
         </header>
+
+        <!-- Settings Modal -->
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <h2>Manage Questions</h2>
+                
+                <div class="add-question-form">
+                    <h3 style="margin-bottom: 15px; color: #1a365d; font-size: 1em;">Add New Question</h3>
+                    <div class="form-group">
+                        <input type="text" id="newQuestionInput" placeholder="Enter new question">
+                    </div>
+                    <button id="addQuestionBtn">Add Question</button>
+                </div>
+
+                <h3 style="margin-bottom: 15px; color: #1a365d; font-size: 1em;">Current Questions</h3>
+                <div class="questions-list" id="questionsList"></div>
+
+                <button class="modal-close-btn" id="closeSettingsBtn">Close</button>
+            </div>
+        </div>
 
         <div id="alert" class="alert"></div>
 
@@ -320,8 +501,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@latest/dist/xlsx.full.min.js"></script>
     <script>
-        // Hardcoded questions from the Excel file top row
-        const headers = [
+        // Default questions from the Excel file top row
+        const defaultHeaders = [
             "Subsystem #",
             "CWA #",
             "Isometric #",
@@ -349,8 +530,10 @@
             "Comments"
         ];
         
+        let headers = [];
         let data = [];
         let editingIndex = null;
+        let editingQuestionIndex = null;
 
         const formFields = document.getElementById('formFields');
         const dataForm = document.getElementById('dataForm');
@@ -363,9 +546,29 @@
         const mainContent = document.getElementById('mainContent');
         const submitBtn = document.getElementById('submitBtn');
         const cancelBtn = document.getElementById('cancelBtn');
+        
+        // Modal elements
+        const manageQuestionsBtn = document.getElementById('manageQuestionsBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+        const addQuestionBtn = document.getElementById('addQuestionBtn');
+        const newQuestionInput = document.getElementById('newQuestionInput');
+        const questionsList = document.getElementById('questionsList');
+
+        // Load questions from localStorage or use defaults
+        function loadQuestions() {
+            const saved = localStorage.getItem('weld_log_questions');
+            headers = saved ? JSON.parse(saved) : [...defaultHeaders];
+        }
+
+        // Save questions to localStorage
+        function saveQuestions() {
+            localStorage.setItem('weld_log_questions', JSON.stringify(headers));
+        }
 
         // Initialize app on load
         function initializeApp() {
+            loadQuestions();
             renderForm();
             renderGrid();
             exportBtn.style.display = 'inline-block';
@@ -374,6 +577,94 @@
             dataForm.elements[0]?.focus();
             showAlert('Ready to start! Enter inspection data below.', 'success');
         }
+
+        // Open/Close modal
+        manageQuestionsBtn.addEventListener('click', () => {
+            renderQuestionsList();
+            settingsModal.classList.add('show');
+        });
+
+        closeSettingsBtn.addEventListener('click', () => {
+            settingsModal.classList.remove('show');
+            newQuestionInput.value = '';
+            editingQuestionIndex = null;
+        });
+
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) {
+                settingsModal.classList.remove('show');
+            }
+        });
+
+        // Add new question
+        addQuestionBtn.addEventListener('click', () => {
+            const value = newQuestionInput.value.trim();
+            if (!value) {
+                showAlert('Please enter a question', 'error');
+                return;
+            }
+
+            if (editingQuestionIndex !== null) {
+                // Update existing question
+                headers[editingQuestionIndex] = value;
+                editingQuestionIndex = null;
+                addQuestionBtn.textContent = 'Add Question';
+            } else {
+                // Add new question
+                headers.push(value);
+            }
+
+            saveQuestions();
+            newQuestionInput.value = '';
+            renderQuestionsList();
+            renderForm();
+            renderGrid();
+            showAlert('Questions updated successfully.', 'success');
+        });
+
+        // Render questions list in modal
+        function renderQuestionsList() {
+            questionsList.innerHTML = '';
+            headers.forEach((question, idx) => {
+                const item = document.createElement('div');
+                item.className = 'question-item';
+                item.innerHTML = `
+                    <span>${idx + 1}. ${question}</span>
+                    <div class="question-item-actions">
+                        <button class="edit-btn" onclick="editQuestion(${idx})">Edit</button>
+                        <button class="delete-btn" onclick="deleteQuestion(${idx})">Delete</button>
+                    </div>
+                `;
+                questionsList.appendChild(item);
+            });
+        }
+
+        // Edit question
+        window.editQuestion = function(idx) {
+            editingQuestionIndex = idx;
+            newQuestionInput.value = headers[idx];
+            addQuestionBtn.textContent = 'Update Question';
+            newQuestionInput.focus();
+        };
+
+        // Delete question
+        window.deleteQuestion = function(idx) {
+            if (confirm('Delete this question? All data in this column will be affected.')) {
+                headers.splice(idx, 1);
+                // Remove data from all entries for this column
+                data.forEach(row => {
+                    const keys = Object.keys(row);
+                    if (keys[idx]) {
+                        delete row[keys[idx]];
+                    }
+                });
+                saveQuestions();
+                renderQuestionsList();
+                renderForm();
+                renderGrid();
+                showAlert('Question deleted.', 'success');
+            }
+        };
 
 
 
