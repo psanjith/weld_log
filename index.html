@@ -399,7 +399,7 @@
             background: #4299e1;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 20px 20px;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 500;
@@ -968,6 +968,8 @@
                 }
 
                 const logId = Date.now().toString();
+                currentLogId = logId;
+                saveLogData();
                 const logs = loadSavedLogs();
                 logs.push({
                     id: logId,
@@ -976,8 +978,6 @@
                     entryCount: data.length
                 });
                 saveLogs(logs);
-                saveLogData();
-                currentLogId = logId;
                 renderLogSelector();
                 showAlert(`Log "${logName}" saved with ${data.length} entries!`, 'success');
             }
