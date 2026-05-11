@@ -100,6 +100,33 @@
             min-height: 80px;
         }
 
+        .input-group {
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+        }
+
+        .text-input {
+            flex: 1;
+        }
+
+        .file-upload {
+            flex-shrink: 0;
+        }
+
+        .form-group input[type="file"] {
+            padding: 6px 10px;
+            font-size: 0.85em;
+            cursor: pointer;
+        }
+
+        .file-name {
+            font-size: 0.85em;
+            color: #48bb78;
+            margin-top: 4px;
+            margin-left: 8px;
+        }
+
         .grid-container {
             overflow-x: auto;
             background: #f8f9fa;
@@ -548,6 +575,80 @@
         let data = [];
         let editingIndex = null;
         let editingQuestionIndex = null;
+        let db = null;
+        
+        // Initialize IndexedDB for file storage
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('WeldLogDB', 1);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (e) => {
+                    const database = e.target.result;
+                    if (!database.objectStoreNames.contains('files')) {
+                        database.createObjectStore('files', { keyPath: 'id' });
+                    }
+                };
+            });
+        }
+
+        // Store file in IndexedDB
+        function storeFile(file, rowId, fieldIndex) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const transaction = db.transaction(['files'], 'readwrite');
+                    const store = transaction.objectStore('files');
+                    const fileData = {
+                        id: `${rowId}_${fieldIndex}`,
+                        name: file.name,
+                        data: reader.result,
+                        type: file.type,
+                        timestamp: new Date().toISOString()
+                    };
+                    store.put(fileData);
+                    transaction.oncomplete = () => resolve(fileData.id);
+                    transaction.onerror = () => reject(transaction.error);
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // Get file from IndexedDB
+        function getFile(fileId) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['files'], 'readonly');
+                const store = transaction.objectStore('files');
+                const request = store.get(fileId);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Download file from IndexedDB
+        window.downloadFile = async function(fileId) {
+            try {
+                const fileData = await getFile(fileId);
+                if (!fileData) {
+                    showAlert('File not found', 'error');
+                    return;
+                }
+                const blob = new Blob([fileData.data], { type: fileData.type });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = fileData.name;
+                link.click();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                showAlert('Error downloading file: ' + error.message, 'error');
+            }
+        }
 
         const formFields = document.getElementById('formFields');
         const dataForm = document.getElementById('dataForm');
@@ -628,16 +729,21 @@
         }
 
         // Initialize app on load
-        function initializeApp() {
-            loadQuestions();
-            renderForm();
-            renderLogSelector();
-            logManagement.style.display = 'block';
-            exportBtn.style.display = 'inline-block';
-            renderGrid();
-            dataForm.reset();
-            dataForm.elements[0]?.focus();
-            showAlert('Ready to start! Enter inspection data below.', 'success');
+        async function initializeApp() {
+            try {
+                await initDB();
+                loadQuestions();
+                renderForm();
+                renderLogSelector();
+                logManagement.style.display = 'block';
+                exportBtn.style.display = 'inline-block';
+                renderGrid();
+                dataForm.reset();
+                dataForm.elements[0]?.focus();
+                showAlert('Ready to start! Enter inspection data below.', 'success');
+            } catch (error) {
+                showAlert('Error initializing app: ' + error.message, 'error');
+            }
         }
 
         // Open/Close modal
@@ -740,11 +846,33 @@
                 div.className = 'form-group';
                 div.innerHTML = `
                     <label for="field-${idx}">${header}</label>
-                    <input type="text" id="field-${idx}" name="field-${idx}" placeholder="Enter response" autofocus=${idx === 0 ? 'true' : 'false'}>
+                    <div class="input-group">
+                        <input type="text" id="field-${idx}" name="field-${idx}" class="text-input" placeholder="Enter response" autofocus=${idx === 0 ? 'true' : 'false'}>
+                        <div class="file-upload">
+                            <input type="file" id="file-${idx}" accept=".pdf" onchange="handleFileSelect(this, ${idx})">
+                            <div id="file-name-${idx}" class="file-name"></div>
+                        </div>
+                    </div>
                 `;
                 formFields.appendChild(div);
             });
         }
+
+        // Handle file selection
+        window.handleFileSelect = function(input, fieldIdx) {
+            const file = input.files[0];
+            const fileNameDiv = document.getElementById(`file-name-${fieldIdx}`);
+            
+            if (file && file.type === 'application/pdf') {
+                fileNameDiv.textContent = `✓ ${file.name}`;
+            } else if (file) {
+                showAlert('Please select a PDF file', 'error');
+                input.value = '';
+                fileNameDiv.textContent = '';
+            } else {
+                fileNameDiv.textContent = '';
+            }
+        };
 
         // Render grid
         function renderGrid() {
@@ -764,7 +892,15 @@
             data.forEach((row, rowIdx) => {
                 html += '<tr>';
                 headers.forEach(header => {
-                    html += `<td>${row[header] || ''}</td>`;
+                    const fileId = row[`${header}_file`];
+                    const value = row[header] || '';
+                    
+                    if (fileId) {
+                        // Show file with download link
+                        html += `<td><button class="btn-primary" style="padding: 6px 12px; font-size: 0.85em;" type="button" onclick="downloadFile('${fileId}')">📄 ${value}</button></td>`;
+                    } else {
+                        html += `<td>${value}</td>`;
+                    }
                 });
                 html += `<td><div class="row-actions"><button class="btn-secondary" type="button" onclick="editRow(${rowIdx})">Edit</button><button class="btn-danger" type="button" onclick="deleteRow(${rowIdx})">Delete</button></div></td>`;
                 html += '</tr>';
@@ -775,21 +911,41 @@
         }
 
         // Form submit
-        dataForm.addEventListener('submit', function(e) {
+        dataForm.addEventListener('submit', async function(e) {
             e.preventDefault();
 
             const row = {};
             let hasAnyData = false;
-            headers.forEach((header, idx) => {
-                const input = document.getElementById(`field-${idx}`);
-                const value = input.value.trim();
-                // Fill empty fields with "N/A"
-                row[header] = value || 'N/A';
-                if (value) hasAnyData = true;
-            });
+            const rowId = editingIndex !== null ? editingIndex : data.length;
+            
+            for (let idx = 0; idx < headers.length; idx++) {
+                const header = headers[idx];
+                const textInput = document.getElementById(`field-${idx}`);
+                const fileInput = document.getElementById(`file-${idx}`);
+                
+                let value = textInput.value.trim();
+                
+                // Handle file upload
+                if (fileInput.files.length > 0) {
+                    try {
+                        const fileId = await storeFile(fileInput.files[0], rowId, idx);
+                        row[`${header}_file`] = fileId;
+                        row[header] = fileInput.files[0].name;
+                        hasAnyData = true;
+                    } catch (error) {
+                        showAlert('Error uploading file: ' + error.message, 'error');
+                        return;
+                    }
+                } else if (value) {
+                    row[header] = value;
+                    hasAnyData = true;
+                } else {
+                    row[header] = 'N/A';
+                }
+            }
 
             if (!hasAnyData) {
-                showAlert('Please fill in at least one field', 'error');
+                showAlert('Please fill in at least one field or upload a file', 'error');
                 return;
             }
 
